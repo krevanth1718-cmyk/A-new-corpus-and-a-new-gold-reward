@@ -1,0 +1,105 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNgCEK+jJmywHGgPd6n79CV",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/krevanth1718-cmyk/A-new-corpus-and-a-new-gold-reward/blob/main/A%20new%20corpus%20and%20a%20new%20gold%20reward\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 2,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "6MdBzvTOpLav",
+        "outputId": "fc854726-2db6-4446-d14f-75c11d242cc4"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "-0.40  sunny in the south <eos>\n",
+            "+0.30  sunny in the south with 31 degrees <eos>\n",
+            "+0.60  sunny and 19 degrees <eos>\n",
+            "-0.60  rain is likely in the south <eos>\n",
+            "+0.60  cloudy with 31 degrees <eos>\n",
+            "-0.70  light rain is likely in the north <eos>\n"
+          ]
+        }
+      ],
+      "source": [
+        "import random\n",
+        "from collections import defaultdict\n",
+        "\n",
+        "# 1. Corpus: weather reports\n",
+        "corpus = [\n",
+        "    \"rain is likely in the north <eos>\",\n",
+        "    \"sunny and warm with 28 degrees <eos>\",\n",
+        "    \"cloudy with light wind in the north <eos>\",\n",
+        "    \"sunny in the south with 31 degrees <eos>\",\n",
+        "    \"light rain and 19 degrees in the south <eos>\"\n",
+        "]\n",
+        "\n",
+        "# 2. Gold reward: prefer short reports that state a temperature\n",
+        "def gold_reward(sentence):\n",
+        "    words = [w for w in sentence.split() if w != \"<eos>\"]\n",
+        "    return 1.0 * any(w.isdigit() for w in words) - 0.1 * len(words)\n",
+        "\n",
+        "# 3. Build the reference model\n",
+        "follow = defaultdict(list)\n",
+        "\n",
+        "for sentence in corpus:\n",
+        "    words = [\"<bos>\"] + sentence.split()\n",
+        "    for a, b in zip(words, words[1:]):\n",
+        "        follow[a].append(b)\n",
+        "\n",
+        "# 4. Sample a sentence from the reference model\n",
+        "def sample(rng, max_words=12):\n",
+        "    word = \"<bos>\"\n",
+        "    out = []\n",
+        "\n",
+        "    while word != \"<eos>\" and len(out) < max_words:\n",
+        "        if not follow[word]:\n",
+        "            break\n",
+        "        word = rng.choice(follow[word])\n",
+        "        out.append(word)\n",
+        "\n",
+        "    return \" \".join(out)\n",
+        "\n",
+        "# 5. Generate and score six sentences\n",
+        "def main():\n",
+        "    rng = random.Random(0)\n",
+        "\n",
+        "    for _ in range(6):\n",
+        "        sentence = sample(rng)\n",
+        "        print(f\"{gold_reward(sentence):+.2f}  {sentence}\")\n",
+        "\n",
+        "if __name__ == \"__main__\":\n",
+        "    main()"
+      ]
+    }
+  ]
+}
